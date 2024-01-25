@@ -53,13 +53,28 @@ class feature_extractor:
         # Hint 2:  There might be words from the input sentence not in the vocab_dict when we try to use this.
 
         # Hint 3:  Python's standard library: Collections.Counter might be useful
-
-        x = sparse.csc_array(shape=(3,1)) # please modify this. 3 is not the right dimension.
-
         # TODO =============================================================================
-        return x
 
         # Solution:
+        tokenized_list = self.tokenize(sentence)
+        
+        word_count = Counter(tokenized_list)
+        
+        row_indices = []
+        col_indices = [0]
+        values = []
+        
+        for word in word_count:
+            if word not in self.vocab_dict:
+                self.vocab_dict[word] = len(self.vocab_dict)
+                self.vocab.append(word)
+                self.d += 1
+            row_indices.append(self.vocab_dict[word])
+            values.append(word_count[word])
+
+        x = sparse.csc_array((np.array(values), (np.array(row_indices), np.array(col_indices))), shape=(self.d,1))
+        
+        return x
 
     def __call__(self, sentence):
         # This function makes this any instance of this python class a callable object
@@ -151,6 +166,8 @@ class classifier_agent():
         # It is the score the classifier used to compare different classes,
         # e.g., for linear classifier it is the weighted linear combination of the features
         #       in decision tree classifiers, it is the voting score at each leaf node.
+        for i in range(m):
+            s[i] = self.params.T @ X[:,i]
         # TODO =============================================================================
         return s
 
@@ -214,8 +231,10 @@ class classifier_agent():
         # TODO ======================== YOUR CODE HERE =====================================
         # The function should work for any integer m > 0.
         # You may first call score_function
+        exponential = np.exp(self.score_function(X))
+        p = exponential/(1+exponential)
 
-        loss =  0.0
+        loss = -y*np.log(p)-(1-y)*np.log(1-p)
 
         # TODO =============================================================================
 
@@ -234,6 +253,8 @@ class classifier_agent():
         # Hint 1:  Use the score_function first
         # Hint 2:  vectorized operations will be orders of magnitudely faster than a for loop
         # Hint 3:  don't make X a dense matrix
+        
+        
 
         grad = np.zeros_like(self.params)
         # TODO =============================================================================
