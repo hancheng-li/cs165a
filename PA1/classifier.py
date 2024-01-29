@@ -61,17 +61,18 @@ class feature_extractor:
         word_count = Counter(tokenized_list)
         
         row_indices = []
-        col_indices = [0]
         values = []
         
         for word in word_count:
             if word not in self.vocab_dict:
+                continue
                 self.vocab_dict[word] = len(self.vocab_dict)
                 self.vocab.append(word)
                 self.d += 1
             row_indices.append(self.vocab_dict[word])
             values.append(word_count[word])
 
+        col_indices = [0 for i in range(len(row_indices))]
         x = sparse.csc_array((np.array(values), (np.array(row_indices), np.array(col_indices))), shape=(self.d,1))
         
         return x
@@ -159,6 +160,8 @@ class classifier_agent():
         if d != d1:
             self.params = np.array([0.0 for i in range(d)])
 
+        # print(self.params.reshape(-1,1).shape)
+        # print(X[:,0].shape)
         # TODO ======================== YOUR CODE HERE =====================================
         s = np.zeros(shape=m)  # this is the desired type and shape for the output
 
@@ -166,8 +169,10 @@ class classifier_agent():
         # It is the score the classifier used to compare different classes,
         # e.g., for linear classifier it is the weighted linear combination of the features
         #       in decision tree classifiers, it is the voting score at each leaf node.
-        for i in range(m):
-            s[i] = self.params.T @ X[:,i]
+
+        s = X.T.dot(self.params).flatten()
+        # for i in range(m):
+        #     s[i] = X[:,i].T.dot(self.params.reshape(-1,1)).item()
         # TODO =============================================================================
         return s
 
@@ -186,14 +191,16 @@ class classifier_agent():
 
         # TODO ======================== YOUR CODE HERE =====================================
         # This should be a simple but useful function.
-        preds = np.zeros(shape=X.shape[1])
-
-
+        
+        s = self.score_function(X)
+        preds = np.where(s>0,1,0)
         # Tip:   Read the required format of the predictions.
 
         # TODO =============================================================================
-
-        return preds
+        if RETURN_SCORE:
+            return s
+        else:
+            return preds
 
 
 
@@ -213,7 +220,8 @@ class classifier_agent():
         # TODO ======================== YOUR CODE HERE =====================================
         # The function should work for any integer m > 0.
         # You may wish to use self.predict
-        err =  0.0
+        preds = self.predict(X,RAW_TEXT=False)
+        err = np.mean(preds!=y)
         # TODO =============================================================================
 
         return err
@@ -231,13 +239,12 @@ class classifier_agent():
         # TODO ======================== YOUR CODE HERE =====================================
         # The function should work for any integer m > 0.
         # You may first call score_function
-        exponential = np.exp(self.score_function(X))
-        p = exponential/(1+exponential)
+        s = self.score_function(X)
+        m = np.maximum(s,0)
+        lae = np.logaddexp(s-m, -m)
 
-        loss = -y*np.log(p)-(1-y)*np.log(1-p)
-
+        loss = -(s-m-lae)*y + (m+lae)*(1-y)
         # TODO =============================================================================
-
         #return loss
         return np.mean(loss)
 
@@ -253,10 +260,14 @@ class classifier_agent():
         # Hint 1:  Use the score_function first
         # Hint 2:  vectorized operations will be orders of magnitudely faster than a for loop
         # Hint 3:  don't make X a dense matrix
+        exp = np.exp(-self.score_function(X))
+        row_indices = np.arange(X.shape[1])
+        col_indices = np.arange(X.shape[1])
+        values = 1/(1+exp)-y
+        multiplier = sparse.csc_array((values, (row_indices, col_indices)), shape=(X.shape[1], X.shape[1]))
+        grad_matrix = X.dot(multiplier)
         
-        
-
-        grad = np.zeros_like(self.params)
+        grad = np.array(grad_matrix.sum(axis=1)).flatten()/X.shape[1]
         # TODO =============================================================================
         return grad
 
@@ -296,9 +307,18 @@ class classifier_agent():
         for i in range(niter):
             # TODO ======================== YOUR CODE HERE =====================================
             # You need to iteratively update self.params
+            grad = self.gradient(Xtrain, ytrain)
+            # print(grad.shape)
+            # assert 0 == 1
 
-
+            # sub = (lr * grad)
+            # print((self.params - sub).shape)
+            # assert 0 == 1
+            
+            self.params = self.params - lr*grad
+            # assert 0 == 1
             # TODO =============================================================================
+            # print(isinstance(Xtrain, sparse.csc_matrix))
             train_losses.append(self.loss_function(Xtrain, ytrain))
             train_errors.append(self.error(Xtrain, ytrain))
 
@@ -359,16 +379,16 @@ class classifier_agent():
             # You need to iteratively update self.params
             # You should use the following for selecting the index of one random data point.
 
-            # idx = np.random.choice(len(ytrain), 1)
+                idx = np.random.choice(len(ytrain), 1)
+                grad = self.gradient(Xtrain[:,idx], ytrain[idx])
+                self.params = self.params - lr * grad
 
             # TODO =============================================================================
             # logging
             train_losses.append(self.loss_function(Xtrain, ytrain))
             train_errors.append(self.error(Xtrain, ytrain))
-
             print('epoch =',i,'iter=',i*len(ytrain)+j+1,'loss = ', train_losses[-1],
-                  'error = ', train_errors[-1])
-
+                'error = ', train_errors[-1])
 
         return train_losses, train_errors
 

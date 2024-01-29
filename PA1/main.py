@@ -41,8 +41,6 @@ def main():
 
     #Xtrain = text2feat.load_data_from_file("train_data.npy")
 
-
-
     # train with GD
     niter = 1000
     print("Training using GD for ", niter, "iterations.")
