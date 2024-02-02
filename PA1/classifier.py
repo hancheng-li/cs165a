@@ -1,10 +1,9 @@
-
-
 import scipy
 from scipy import sparse
 import numpy as np
 from collections import Counter
 import string
+import time
 
 # utility functions we provides
 
@@ -302,6 +301,8 @@ class classifier_agent():
 
         train_losses = [self.loss_function(Xtrain, ytrain)]
         train_errors = [self.error(Xtrain, ytrain)]
+        
+        times = []
 
         # Solution:
         for i in range(niter):
@@ -323,10 +324,12 @@ class classifier_agent():
             train_errors.append(self.error(Xtrain, ytrain))
 
             if i%100 == 0:
+                t = time.time()
+                times.append(t)
                 print('iter =',i,'loss = ', train_losses[-1],
                   'error = ', train_errors[-1])
 
-        return train_losses, train_errors
+        return train_losses, train_errors, times
 
 
 
@@ -371,7 +374,7 @@ class classifier_agent():
         niter = int(nepoch / sampler)
 
         #params = sparse.csr_array(self.params)
-
+        times = []
         for i in range(nepoch):
             for j in range(len(ytrain)):
 
@@ -387,10 +390,12 @@ class classifier_agent():
             # logging
             train_losses.append(self.loss_function(Xtrain, ytrain))
             train_errors.append(self.error(Xtrain, ytrain))
+            t = time.time()
+            times.append(t)
             print('epoch =',i,'iter=',i*len(ytrain)+j+1,'loss = ', train_losses[-1],
                 'error = ', train_errors[-1])
 
-        return train_losses, train_errors
+        return train_losses, train_errors, times
 
 
     def eval_model(self, test_sentences, test_labels, RAW_TEXT=True):

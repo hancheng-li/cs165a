@@ -2,6 +2,7 @@ from classifier import load_data,tokenize, feature_extractor, data_processor
 from classifier import classifier_agent
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def main():
@@ -47,7 +48,8 @@ def main():
     d = len(vocab_list)
     params = np.array([0.0 for i in range(d)])
     classifier1 = classifier_agent(feat_map,params)
-    classifier1.train_gd(Xtrain,ytrain,niter,0.01,RAW_TEXT=False)
+    train_losses_gd, train_errors_gd, times_gd = classifier1.train_gd(Xtrain,ytrain,niter,0.01,RAW_TEXT=False)
+    iterations = [i for i in range(0, niter, 100)]
 
 
 
@@ -58,7 +60,7 @@ def main():
     d = len(vocab_list)
     params = np.array([0.0 for i in range(d)])
     classifier2 = classifier_agent(feat_map, params)
-    classifier2.train_sgd(Xtrain, ytrain, nepoch, 0.001,RAW_TEXT=False)
+    train_losses_sgd, train_errors_sgd, times_sgd = classifier2.train_sgd(Xtrain, ytrain, nepoch, 0.001,RAW_TEXT=False)
 
 
     err1 = classifier1.eval_model(test_sentences,test_labels)
